@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -27,9 +28,12 @@ func main() {
 	for {
 		fmt.Println("--------------- Game Start!! --------------------")
 		sm := NewGameStateMachine(f)
-		go sm.ClientEventHandler()
-		go sm.Run()
+		ctx := context.Background()
+		ctx, cancel := context.WithCancel(ctx)
+		go sm.ClientEventHandler(ctx)
+		go sm.Run(ctx)
 		Exec(sm, f)
+		cancel()
 		fmt.Println("--------------- Game Finish!! --------------------")
 	}
 }

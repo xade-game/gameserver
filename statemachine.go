@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -52,33 +53,47 @@ func (sm *GameStateMachine) RegisterClient(client *Client) {
 
 func (sm *GameStateMachine) Broadcast(data []byte) {
 	for _, client := range sm.clients {
-		client.recv <- data
+		client.SendData(data)
 	}
 }
 
-type ClientData struct {
-	Id     int    `json:"id"`
+type CommandData struct {
+	ClientId int    `json:"client_id"`
+	Command  string `json:"command"`
+	Status   string `json:"status"`
+}
+
+type GameStateData struct {
 	Status string `json:"status"`
 }
 
-func (sm *GameStateMachine) ClientEventHandler() {
-	for data := range sm.input {
-		client := &ClientData{}
-		json.Unmarshal(data, client)
-		sm.UpdateClientState(client.Id, client.Status)
-	}
-}
-
-func (sm *GameStateMachine) UpdateClientState(id int, status string) {
-	for _, c := range sm.clients {
-		if c.id == id {
-			c.status = dead
+func (sm *GameStateMachine) ClientEventHandler(ctx context.Context) {
+	for {
+		select {
+		case data := <-sm.input:
+			cmd := &CommandData{}
+			json.Unmarshal(data, cmd)
+			sm.UpdateByCommand(cmd)
+		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (sm *GameStateMachine) Run() {
+func (sm *GameStateMachine) UpdateByCommand(cmd *CommandData) {
+	switch cmd.Command {
+	case "update":
+		for _, c := range sm.clients {
+			if c.id == cmd.ClientId {
+				c.status = dead
+				fmt.Printf(".")
+				return
+			}
+		}
+	}
+}
+
+func (sm *GameStateMachine) Run(ctx context.Context) {
 	go Tick(100, sm.tick)
 
 	fmt.Println("Phase: Init")
@@ -89,7 +104,11 @@ func (sm *GameStateMachine) Run() {
 				sm.State = opened
 				sm.timer = 0
 				fmt.Println("\nPhase: Opened")
-				sm.Broadcast([]byte("opended"))
+				data := &GameStateData{
+					Status: "opened",
+				}
+				jsonData, _ := json.Marshal(data)
+				sm.Broadcast(jsonData)
 			}
 		case opened:
 			if sm.isClosed() {
@@ -111,7 +130,7 @@ func (sm *GameStateMachine) Run() {
 }
 
 func (sm *GameStateMachine) isOpened() bool {
-	return len(sm.clients) >= 10 || sm.timer > 20
+	return len(sm.clients) >= 10
 }
 
 func (sm *GameStateMachine) isClosed() bool {
