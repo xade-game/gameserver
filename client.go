@@ -48,6 +48,7 @@ type Client struct {
 	id     int
 	status ClientState
 	conn   IConn
+	em     *EventManager
 }
 
 func RandomClient(server chan []byte) *Client {
@@ -65,37 +66,41 @@ func NewClient(server chan []byte) *Client {
 		id:     id,
 		status: 0,
 		conn:   conn,
+		em:     NewEventManager(),
 	}
 
-	go c.EventHandler()
-
+	c.em.AddEventListener("opended", c.gameOpenHandler)
+	go c.em.Run()
+	go c.DataReceive()
 	return c
+}
+
+func (c *Client) gameOpenHandler(e *Event) {
+	c.status = started
+	msec := rand.Intn(50) * 100
+	fmt.Printf("client(%d) will die after %d milli second\n", c.id, msec)
+	time.Sleep(time.Duration(msec) * time.Millisecond)
+	data := &CommandData{
+		ClientId: c.id,
+		Command:  "update",
+		Status:   "dead",
+	}
+	jsonData, _ := json.Marshal(data)
+	c.conn.SendServer(jsonData)
 }
 
 func (c *Client) SendData(data []byte) {
 	c.conn.Client() <- data
 }
 
-func (c *Client) EventHandler() {
+func (c *Client) DataReceive() {
 	for data := range c.conn.Client() {
-		fmt.Printf("client(%d): recevied: %s\n", c.id, string(data))
-
-		game := &GameStateData{}
-		json.Unmarshal(data, game)
-
-		switch game.Status {
-		case "opened":
-			c.status = started
-			msec := rand.Intn(50) * 100
-			fmt.Printf("client(%d) will die after %d milli second\n", c.id, msec)
-			time.Sleep(time.Duration(msec) * time.Millisecond)
-			data := &CommandData{
-				ClientId: c.id,
-				Command:  "update",
-				Status:   "dead",
-			}
-			jsonData, _ := json.Marshal(data)
-			c.conn.SendServer(jsonData)
+		d := c.em.GetDispatchStream()
+		e := Event{
+			label: "opended",
+			data:  string(data),
 		}
+		fmt.Printf("client(%d): recevied: %s\n", c.id, string(data))
+		d <- e
 	}
 }
