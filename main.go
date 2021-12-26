@@ -6,13 +6,15 @@ import (
 	"time"
 )
 
-func Exec(sm *GameStateMachine, f chan int) {
+func Exec(ctx context.Context, sm *GameStateMachine, f chan int) {
+	go sm.Tick()
+
 	for {
 		time.Sleep(time.Duration(100) * time.Millisecond)
 		if sm.State != initialized {
 			break
 		}
-		c := RandomClient(sm.input)
+		c := RandomClient(ctx, sm.input)
 		if c != nil {
 			sm.RegisterClient(c)
 		}
@@ -26,13 +28,12 @@ func Exec(sm *GameStateMachine, f chan int) {
 func main() {
 	f := make(chan int)
 	for {
-		fmt.Println("--------------- Game Start!! --------------------")
-		sm := NewGameStateMachine(f)
+		fmt.Println("--------------- Game Created!! --------------------")
 		ctx := context.Background()
 		ctx, cancel := context.WithCancel(ctx)
-		go sm.ClientEventHandler(ctx)
-		go sm.Run(ctx)
-		Exec(sm, f)
+		sm := NewGameStateMachine(ctx, f)
+
+		Exec(ctx, sm, f)
 		cancel()
 		fmt.Println("--------------- Game Finish!! --------------------")
 	}

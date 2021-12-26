@@ -29,19 +29,31 @@ type GameStateMachine struct {
 	input   chan []byte
 	clients []*Client
 	timer   int
+	em      *EventManager
 }
 
-func NewGameStateMachine(f chan int) *GameStateMachine {
+func NewGameStateMachine(ctx context.Context, f chan int) *GameStateMachine {
 	t := make(chan int)
 	i := make(chan []byte, 30)
-	return &GameStateMachine{
+	sm := &GameStateMachine{
 		State:   initialized,
 		tick:    t,
 		finish:  f,
 		input:   i,
 		clients: []*Client{},
 		timer:   0,
+		em:      NewEventManager(),
 	}
+
+	sm.em.AddEventListener("init", sm.GameInitHandler)
+	sm.em.AddEventListener("opened", sm.GameOpenedHandler)
+	sm.em.AddEventListener("closed", sm.GameClosedHandler)
+	sm.em.AddEventListener("update", sm.ClientEventHandler)
+
+	go sm.em.Run(ctx)
+	go sm.SetClientEventDispatcher(ctx)
+
+	return sm
 }
 
 func (sm *GameStateMachine) RegisterClient(client *Client) {
@@ -67,66 +79,57 @@ type GameStateData struct {
 	Status string `json:"status"`
 }
 
-func (sm *GameStateMachine) ClientEventHandler(ctx context.Context) {
+func (sm *GameStateMachine) SetClientEventDispatcher(ctx context.Context) {
 	for {
 		select {
 		case data := <-sm.input:
-			cmd := &CommandData{}
-			json.Unmarshal(data, cmd)
-			sm.UpdateByCommand(cmd)
+			sm.em.DispatchEvent("update", string(data))
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (sm *GameStateMachine) UpdateByCommand(cmd *CommandData) {
-	switch cmd.Command {
-	case "update":
-		for _, c := range sm.clients {
-			if c.id == cmd.ClientId {
-				c.status = dead
-				fmt.Printf(".")
-				return
-			}
+func (sm *GameStateMachine) ClientEventHandler(e *Event) {
+	cmd := &CommandData{}
+	json.Unmarshal([]byte(e.data), cmd)
+	for _, c := range sm.clients {
+		if c.id == cmd.ClientId {
+			c.status = dead
+			fmt.Printf(".")
+			return
 		}
 	}
 }
 
-func (sm *GameStateMachine) Run(ctx context.Context) {
-	go Tick(100, sm.tick)
-
-	fmt.Println("Phase: Init")
-	for range sm.tick {
-		switch sm.State {
-		case initialized:
-			if sm.isOpened() {
-				sm.State = opened
-				sm.timer = 0
-				fmt.Println("\nPhase: Opened")
-				data := &GameStateData{
-					Status: "opened",
-				}
-				jsonData, _ := json.Marshal(data)
-				sm.Broadcast(jsonData)
-			}
-		case opened:
-			if sm.isClosed() {
-				sm.State = closed
-				sm.timer = 0
-				fmt.Println("\nPhase: Closed")
-			}
-		case closed:
-			for _, c := range sm.clients {
-				if c.status == started {
-					fmt.Printf("client(%d) is winner\n", c.id)
-				}
-			}
-			sm.finish <- 1
-			return
+func (sm *GameStateMachine) GameInitHandler(e *Event) {
+	if sm.isOpened() {
+		fmt.Println("\nPhase: Opened")
+		sm.State = opened
+		sm.timer = 0
+		data := &GameStateData{
+			Status: "opened",
 		}
-		sm.timer += 1
+		jsonData, _ := json.Marshal(data)
+		sm.Broadcast(jsonData)
 	}
+}
+
+func (sm *GameStateMachine) GameOpenedHandler(e *Event) {
+	if sm.isClosed() {
+		fmt.Println("\nPhase: Closed")
+		sm.State = closed
+		sm.timer = 0
+	}
+}
+
+func (sm *GameStateMachine) GameClosedHandler(e *Event) {
+	for _, c := range sm.clients {
+		if c.status == started {
+			fmt.Printf("client(%d) is winner\n", c.id)
+		}
+	}
+	sm.finish <- 1
 }
 
 func (sm *GameStateMachine) isOpened() bool {
@@ -142,4 +145,19 @@ func (sm *GameStateMachine) isClosed() bool {
 	}
 
 	return survivor <= 1
+}
+
+func (sm *GameStateMachine) Tick() {
+	go Tick(100, sm.tick)
+	for range sm.tick {
+		sm.timer += 1
+		switch sm.State {
+		case initialized:
+			sm.em.DispatchEvent("init")
+		case opened:
+			sm.em.DispatchEvent("opened")
+		case closed:
+			sm.em.DispatchEvent("closed")
+		}
+	}
 }

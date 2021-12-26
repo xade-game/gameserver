@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -51,15 +52,15 @@ type Client struct {
 	em     *EventManager
 }
 
-func RandomClient(server chan []byte) *Client {
+func RandomClient(ctx context.Context, server chan []byte) *Client {
 	a := rand.Intn(100)
 	if a < 40 {
-		return NewClient(server)
+		return NewClient(ctx, server)
 	}
 	return nil
 }
 
-func NewClient(server chan []byte) *Client {
+func NewClient(ctx context.Context, server chan []byte) *Client {
 	id := rand.Intn(200)
 	conn := NewDummyConn(server)
 	c := &Client{
@@ -70,7 +71,7 @@ func NewClient(server chan []byte) *Client {
 	}
 
 	c.em.AddEventListener("opended", c.gameOpenHandler)
-	go c.em.Run()
+	go c.em.Run(ctx)
 	go c.DataReceive()
 	return c
 }
@@ -95,12 +96,6 @@ func (c *Client) SendData(data []byte) {
 
 func (c *Client) DataReceive() {
 	for data := range c.conn.Client() {
-		d := c.em.GetDispatchStream()
-		e := Event{
-			label: "opended",
-			data:  string(data),
-		}
-		fmt.Printf("client(%d): recevied: %s\n", c.id, string(data))
-		d <- e
+		c.em.DispatchEvent("opended", string(data))
 	}
 }

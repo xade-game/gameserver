@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 type Event struct {
 	label string
@@ -48,6 +51,19 @@ func (em *EventManager) GetDispatchStream() chan Event {
 	return em.dispatch
 }
 
+func (em *EventManager) DispatchEvent(data ...string) {
+	label := data[0]
+	body := ""
+	if len(data) > 1 {
+		body = data[1]
+	}
+	e := Event{
+		label: label,
+		data:  body,
+	}
+	em.dispatch <- e
+}
+
 type EventListenerDict struct {
 	label string
 	funcs []func(*Event)
@@ -61,14 +77,19 @@ type EventDispatcher struct {
 	dispatch chan Event
 }
 
-func (em *EventManager) Run() {
-	for event := range em.dispatch {
-		for _, dict := range em.elmap {
-			if dict.label == event.label {
-				for _, fn := range dict.funcs {
-					fn(&event)
+func (em *EventManager) Run(ctx context.Context) {
+	for {
+		select {
+		case event := <-em.dispatch:
+			for _, dict := range em.elmap {
+				if dict.label == event.label {
+					for _, fn := range dict.funcs {
+						fn(&event)
+					}
 				}
 			}
+		case <-ctx.Done():
+			return
 		}
 	}
 }
