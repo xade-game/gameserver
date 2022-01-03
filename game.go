@@ -11,7 +11,7 @@ import (
 type GameState struct {
 	state   stateful.State
 	tick    chan int
-	finish  chan int
+	done    chan int
 	input   chan []byte
 	clients []*Client
 	timer   int
@@ -54,7 +54,7 @@ func (gs *GameState) Finish(targs stateful.TransitionArguments) (stateful.State,
 	if gs.isClosed() {
 		fmt.Println("\nstate opened -> closed")
 		gs.timer = 0
-		gs.finish <- 1
+		gs.done <- 1
 		return Closed, nil
 	}
 	return Opened, nil

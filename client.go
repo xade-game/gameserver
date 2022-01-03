@@ -51,8 +51,7 @@ type Client struct {
 	id     int
 	status ClientState
 	conn   IConn
-	// em     *EventManager
-	ps *pubsub.PubSub
+	ps     *pubsub.PubSub
 }
 
 func RandomClient(ctx context.Context, server chan []byte) *Client {
@@ -64,6 +63,7 @@ func RandomClient(ctx context.Context, server chan []byte) *Client {
 }
 
 func NewClient(ctx context.Context, server chan []byte) *Client {
+	ctx, cancel := context.WithCancel(ctx)
 	id := rand.Intn(200)
 	conn := NewDummyConn(server)
 	c := &Client{
@@ -73,31 +73,35 @@ func NewClient(ctx context.Context, server chan []byte) *Client {
 		ps:     pubsub.New(),
 	}
 
-	c.ps.Sub(c.gameOpenHandler)
-	go c.DataReceive()
+	c.ps.Sub(func(data []byte) {
+		c.status = started
+		msec := rand.Intn(50) * 100
+		fmt.Printf("client(%d) will die after %d milli second\n", c.id, msec)
+		time.Sleep(time.Duration(msec) * time.Millisecond)
+		req := &CommandData{
+			ClientId: c.id,
+			Command:  "update",
+			Status:   "dead",
+		}
+		jsonData, _ := json.Marshal(req)
+		c.conn.SendServer(jsonData)
+		cancel()
+	})
+	go c.DataReceive(ctx)
 	return c
-}
-
-func (c *Client) gameOpenHandler(data []byte) {
-	c.status = started
-	msec := rand.Intn(50) * 100
-	fmt.Printf("client(%d) will die after %d milli second\n", c.id, msec)
-	time.Sleep(time.Duration(msec) * time.Millisecond)
-	req := &CommandData{
-		ClientId: c.id,
-		Command:  "update",
-		Status:   "dead",
-	}
-	jsonData, _ := json.Marshal(req)
-	c.conn.SendServer(jsonData)
 }
 
 func (c *Client) SendData(data []byte) {
 	c.conn.Client() <- data
 }
 
-func (c *Client) DataReceive() {
-	for data := range c.conn.Client() {
-		c.ps.Pub(data)
+func (c *Client) DataReceive(ctx context.Context) {
+	for {
+		select {
+		case data := <-c.conn.Client():
+			c.ps.Pub(data)
+		case <-ctx.Done():
+			return
+		}
 	}
 }

@@ -47,7 +47,7 @@ func NewGameEngine(ctx context.Context, f chan int) *GameEngine {
 	gs := &GameState{
 		state:   Init,
 		tick:    t,
-		finish:  f,
+		done:    f,
 		input:   i,
 		clients: []*Client{},
 		timer:   0,
@@ -88,7 +88,7 @@ func (game *GameEngine) Run(ctx context.Context) {
 		}
 	}
 
-	for range game.gameState.finish {
+	for range game.gameState.done {
 		return
 	}
 }
