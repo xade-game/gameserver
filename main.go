@@ -12,7 +12,7 @@ func main() {
 		ctx := context.Background()
 		ctx, cancel := context.WithCancel(ctx)
 
-		game := NewGameEngine(f)
+		game := NewGameEngine(ctx, f)
 		game.Run(ctx)
 		cancel()
 

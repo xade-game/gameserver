@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/mattn/go-pubsub"
 )
 
 type ClientState int
@@ -49,7 +51,8 @@ type Client struct {
 	id     int
 	status ClientState
 	conn   IConn
-	em     *EventManager
+	// em     *EventManager
+	ps *pubsub.PubSub
 }
 
 func RandomClient(ctx context.Context, server chan []byte) *Client {
@@ -67,26 +70,25 @@ func NewClient(ctx context.Context, server chan []byte) *Client {
 		id:     id,
 		status: 0,
 		conn:   conn,
-		em:     NewEventManager(),
+		ps:     pubsub.New(),
 	}
 
-	c.em.AddEventListener("opended", c.gameOpenHandler)
-	go c.em.Run(ctx)
+	c.ps.Sub(c.gameOpenHandler)
 	go c.DataReceive()
 	return c
 }
 
-func (c *Client) gameOpenHandler(e *Event) {
+func (c *Client) gameOpenHandler(data []byte) {
 	c.status = started
 	msec := rand.Intn(50) * 100
 	fmt.Printf("client(%d) will die after %d milli second\n", c.id, msec)
 	time.Sleep(time.Duration(msec) * time.Millisecond)
-	data := &CommandData{
+	req := &CommandData{
 		ClientId: c.id,
 		Command:  "update",
 		Status:   "dead",
 	}
-	jsonData, _ := json.Marshal(data)
+	jsonData, _ := json.Marshal(req)
 	c.conn.SendServer(jsonData)
 }
 
@@ -96,6 +98,6 @@ func (c *Client) SendData(data []byte) {
 
 func (c *Client) DataReceive() {
 	for data := range c.conn.Client() {
-		c.em.DispatchEvent("opended", string(data))
+		c.ps.Pub(data)
 	}
 }

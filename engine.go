@@ -41,7 +41,7 @@ type GameEngine struct {
 
 type GameArguments struct{}
 
-func NewGameEngine(f chan int) *GameEngine {
+func NewGameEngine(ctx context.Context, f chan int) *GameEngine {
 	t := make(chan int)
 	i := make(chan []byte, 30)
 	gs := &GameState{
@@ -67,16 +67,15 @@ func NewGameEngine(f chan int) *GameEngine {
 		stateful.States{Opened},
 		stateful.States{Closed},
 	)
-
-	return &GameEngine{
+	game := &GameEngine{
 		gameState: gs,
 		sm:        stateMachine,
 	}
+	go game.SetClientEventDispatcher(ctx)
+	return game
 }
 
 func (game *GameEngine) Run(ctx context.Context) {
-	go game.SetClientEventDispatcher(ctx)
-
 	for {
 		time.Sleep(time.Duration(100) * time.Millisecond)
 		if game.gameState.state != Init {
