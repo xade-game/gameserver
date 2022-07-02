@@ -3,6 +3,7 @@ module github.com/xade-game/game-server
 go 1.17
 
 require (
-	github.com/bykof/stateful v0.0.8
-	github.com/mattn/go-pubsub v0.0.0-20160821075316-7a151c7747cd
+	github.com/google/uuid v1.3.0
+	github.com/gorilla/websocket v1.5.0
+	github.com/myoan/snake v0.0.0-20220612172435-238eb8d7ad50
 )

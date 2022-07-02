@@ -1,107 +1,72 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"math/rand"
-	"time"
+	"log"
+	"sync"
 
-	"github.com/mattn/go-pubsub"
+	"github.com/gorilla/websocket"
 )
 
-type ClientState int
-
-const (
-	_ = iota
-	registered
-	started
-	dead
-)
-
-type IConn interface {
-	SendServer(data []byte)
-	Client() chan []byte
+type WebClient struct {
+	uuid      string
+	stream    chan []byte
+	conn      *websocket.Conn
+	observers []Observer
+	mu        sync.Mutex
 }
 
-type DummyConn struct {
-	server chan []byte
-	client chan []byte
+func (c *WebClient) AddObserver(o Observer) {
+	c.observers = append(c.observers, o)
 }
 
-func NewDummyConn(server chan []byte) *DummyConn {
-	client := make(chan []byte, 30)
-	conn := &DummyConn{
-		server: server,
-		client: client,
+func (c *WebClient) Notify(tp int) {
+	for _, o := range c.observers {
+		data := TriggerArgument{
+			EventType: tp,
+			Client:    c,
+		}
+		o.Update(data)
 	}
-
-	return conn
 }
 
-func (conn *DummyConn) SendServer(data []byte) {
-	conn.server <- data
+func (c *WebClient) ID() string {
+	return c.uuid
 }
 
-func (conn *DummyConn) Client() chan []byte {
-	return conn.client
-}
-
-type Client struct {
-	id     int
-	status ClientState
-	conn   IConn
-	ps     *pubsub.PubSub
-}
-
-func RandomClient(ctx context.Context, server chan []byte) *Client {
-	a := rand.Intn(100)
-	if a < 40 {
-		return NewClient(ctx, server)
+func (c *WebClient) Send(data []byte) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	log.Printf("Send to client %s: %s", c.ID(), data)
+	err := c.conn.WriteMessage(websocket.TextMessage, data)
+	if err != nil {
+		log.Printf("[Error] write(%s): %v", c.ID(), err)
+		return err
 	}
 	return nil
 }
 
-func NewClient(ctx context.Context, server chan []byte) *Client {
-	ctx, cancel := context.WithCancel(ctx)
-	id := rand.Intn(200)
-	conn := NewDummyConn(server)
-	c := &Client{
-		id:     id,
-		status: 0,
-		conn:   conn,
-		ps:     pubsub.New(),
-	}
-
-	c.ps.Sub(func(data []byte) {
-		c.status = started
-		msec := rand.Intn(50) * 100
-		fmt.Printf("client(%d) will die after %d milli second\n", c.id, msec)
-		time.Sleep(time.Duration(msec) * time.Millisecond)
-		req := &CommandData{
-			ClientId: c.id,
-			Command:  "update",
-			Status:   "dead",
-		}
-		jsonData, _ := json.Marshal(req)
-		c.conn.SendServer(jsonData)
-		cancel()
-	})
-	go c.DataReceive(ctx)
-	return c
+func (c *WebClient) Stream() chan []byte {
+	return c.stream
 }
 
-func (c *Client) SendData(data []byte) {
-	c.conn.Client() <- data
-}
-
-func (c *Client) DataReceive(ctx context.Context) {
+func (c *WebClient) Run(stream chan []byte) {
 	for {
-		select {
-		case data := <-c.conn.Client():
-			c.ps.Pub(data)
-		case <-ctx.Done():
+		mt, message, err := c.conn.ReadMessage()
+		if err != nil {
+			log.Println("[Error] read: ", err)
+			log.Printf("message type: %d", mt)
+			close(stream)
+			c.Close()
 			return
 		}
+		log.Printf("recv: %s", message)
+
+		stream <- message
 	}
+}
+
+func (c *WebClient) Close() {
+	log.Printf("Close client %s", c.ID())
+	c.Notify(EventClientFinish)
+	c.conn.Close()
 }
