@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"math/rand"
 
 	"github.com/myoan/snake/api"
 )
@@ -55,6 +56,10 @@ func (p *Player) Send(status int, players []*Player) error {
 }
 
 func (p *Player) Move() error {
+	dx := rand.Intn(20)
+	dy := rand.Intn(20)
+	p.x = 100 + dx
+	p.y = 100 + dy
 	return nil
 }
 
