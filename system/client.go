@@ -1,18 +1,48 @@
-package main
+package system
 
 import (
 	"log"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
+type Client interface {
+	ID() string
+	Send(data []byte) error
+	Close()
+	Stream() chan []byte
+}
+
+type TriggerArgument struct {
+	EventType int
+	Client    Client
+}
+
+const (
+	EventClientConnect = iota
+	EventClientFinish
+	EventClientRestart
+)
+
 type WebClient struct {
-	uuid      string
+	Uuid      string
 	stream    chan []byte
 	conn      *websocket.Conn
 	observers []Observer
 	mu        sync.Mutex
+}
+
+func NewWebClient(c *websocket.Conn) *WebClient {
+	stream := make(chan []byte)
+	obs := make([]Observer, 0)
+	return &WebClient{
+		Uuid:      uuid.NewString(),
+		stream:    stream,
+		conn:      c,
+		observers: obs,
+	}
 }
 
 func (c *WebClient) AddObserver(o Observer) {
@@ -30,7 +60,7 @@ func (c *WebClient) Notify(tp int) {
 }
 
 func (c *WebClient) ID() string {
-	return c.uuid
+	return c.Uuid
 }
 
 func (c *WebClient) Send(data []byte) error {
@@ -49,19 +79,19 @@ func (c *WebClient) Stream() chan []byte {
 	return c.stream
 }
 
-func (c *WebClient) Run(stream chan []byte) {
+func (c *WebClient) Run() {
 	for {
 		mt, message, err := c.conn.ReadMessage()
 		if err != nil {
 			log.Println("[Error] read: ", err)
 			log.Printf("message type: %d", mt)
-			close(stream)
+			close(c.Stream())
 			c.Close()
 			return
 		}
 		log.Printf("recv: %s", message)
 
-		stream <- message
+		c.Stream() <- message
 	}
 }
 

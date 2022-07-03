@@ -7,31 +7,16 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/myoan/snake/api"
+	"github.com/xade-game/game-server/system"
 )
 
 const (
 	PlayerNum = 2
 )
 
-const (
-	EventClientConnect = iota
-	EventClientFinish
-	EventClientRestart
-)
-
-type Observer interface {
-	Update(data interface{}) error
-}
-
-type TriggerArgument struct {
-	EventType int
-	Client    Client
-}
-
-func ingameHandler(mng *SceneManager, w http.ResponseWriter, r *http.Request) {
+func ingameHandler(mng *system.SceneManager, w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{}
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	c, err := upgrader.Upgrade(w, r, nil)
@@ -40,19 +25,11 @@ func ingameHandler(mng *SceneManager, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stream := make(chan []byte)
-	obs := make([]Observer, 0)
-	client := &WebClient{
-		uuid:      uuid.NewString(),
-		stream:    stream,
-		conn:      c,
-		observers: obs,
-	}
-
+	client := system.NewWebClient(c)
 	log.Printf("Connect new websocket")
-	go client.Run(stream)
+	go client.Run()
 	client.AddObserver(mng)
-	client.Notify(EventClientConnect)
+	client.Notify(system.EventClientConnect)
 }
 
 func main() {
@@ -66,9 +43,9 @@ func main() {
 	var err error
 
 	ge := NewGameEngine()
-	ge.SceneMng.AddHandler(EventClientConnect, SceneMatchmaking, func(args interface{}) {
+	ge.SceneMng.AddHandler(system.EventClientConnect, SceneMatchmaking, func(args interface{}) {
 		log.Printf("Scene: MatchMaking (%d)\n", len(ge.Clients))
-		ta := args.(TriggerArgument)
+		ta := args.(system.TriggerArgument)
 		ge.AddClient(ta.Client)
 		ta.Client.Send([]byte(fmt.Sprintf("{\"status\":%d, \"id\": \"%s\"}", api.GameStatusInit, ta.Client.ID())))
 		if ge.ReachMaxClient() {
@@ -89,9 +66,9 @@ func main() {
 		}
 	})
 
-	ge.SceneMng.AddHandler(EventClientConnect, SceneIngame, func(args interface{}) {
+	ge.SceneMng.AddHandler(system.EventClientConnect, SceneIngame, func(args interface{}) {
 		log.Printf("Scene: Ingame\n")
-		ta := args.(TriggerArgument)
+		ta := args.(system.TriggerArgument)
 		ge.DeleteClient(ta.Client.ID())
 
 		data := &api.EventResponse{
@@ -102,9 +79,9 @@ func main() {
 		ta.Client.Send(bytes)
 	})
 
-	ge.SceneMng.AddHandler(EventClientFinish, SceneIngame, func(args interface{}) {
+	ge.SceneMng.AddHandler(system.EventClientFinish, SceneIngame, func(args interface{}) {
 		log.Printf("Trigger: EventClientFinish\n")
-		ta := args.(TriggerArgument)
+		ta := args.(system.TriggerArgument)
 		ge.DeleteClient(ta.Client.ID())
 	})
 

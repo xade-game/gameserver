@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/myoan/snake/api"
+	"github.com/xade-game/game-server/system"
 )
 
 const (
@@ -16,14 +17,14 @@ type Player struct {
 	y      int
 	theta  int
 	done   chan struct{}
-	Client Client
+	Client system.Client
 	Status int
 }
 
 func (p *Player) ID() string {
 	return p.Client.ID()
 }
-func NewPlayer(client Client, stream <-chan []byte, x, y int) *Player {
+func NewPlayer(client system.Client, stream <-chan []byte, x, y int) *Player {
 	p := &Player{
 		x:      x,
 		y:      y,
