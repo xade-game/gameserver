@@ -56,7 +56,7 @@ func (p *Player) Send(status int, players []*Player) error {
 	return p.Client.Send(bytes)
 }
 
-func (p *Player) Move(x, y, theta int) error {
+func (p *Player) Move(x, y, theta int) {
 	p.x = x
 	p.y = y
 	p.theta = theta

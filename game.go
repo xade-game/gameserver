@@ -179,9 +179,6 @@ func (g *Game) Run() {
 
 	for range t.C {
 		for _, player := range g.players {
-			player.Move()
-		}
-		for _, player := range g.players {
 			player.Send(api.GameStatusOK, g.players)
 		}
 	}
