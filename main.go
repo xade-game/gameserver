@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
-	"github.com/myoan/snake/api"
+	"github.com/xade-game/game-server/api"
 	"github.com/xade-game/game-server/system"
 )
 

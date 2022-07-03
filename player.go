@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 
-	"github.com/myoan/snake/api"
+	"github.com/xade-game/game-server/api"
 	"github.com/xade-game/game-server/system"
 )
 
@@ -70,21 +70,13 @@ func (p *Player) Move(x, y, theta int) {
 	p.theta = theta
 }
 
-type EventRequest struct {
-	UUID      string `json:"uuid"`
-	Eventtype int    `json:"eventtype"`
-	X         int    `json:"x"`
-	Y         int    `json:"y"`
-	Theta     int    `json:"theta"`
-}
-
 func (p *Player) run(stream <-chan []byte) {
 	for {
 		select {
 		case <-p.done:
 			return
 		case msg := <-stream:
-			var req EventRequest
+			var req api.EventRequest
 			json.Unmarshal(msg, &req)
 
 			p.Move(req.X, req.Y, req.Theta)
