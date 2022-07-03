@@ -9,6 +9,7 @@ import (
 type Player struct {
 	x      int
 	y      int
+	theta  int
 	done   chan struct{}
 	Client Client
 }
@@ -34,9 +35,10 @@ func (p *Player) Send(status int, players []*Player) error {
 	playersProtocol := make([]api.PlayerResponse, len(players))
 	for i, player := range players {
 		playersProtocol[i] = api.PlayerResponse{
-			ID: player.ID(),
-			X:  player.x,
-			Y:  player.y,
+			ID:        player.ID(),
+			X:         player.x,
+			Y:         player.y,
+			Direction: player.theta,
 		}
 	}
 
@@ -54,11 +56,18 @@ func (p *Player) Send(status int, players []*Player) error {
 	return p.Client.Send(bytes)
 }
 
-func (p *Player) Move() error {
-	return nil
+func (p *Player) Move(x, y, theta int) error {
+	p.x = x
+	p.y = y
+	p.theta = theta
 }
 
-func (p *Player) ChangeDirection(direction int) {
+type EventRequest struct {
+	UUID      string `json:"uuid"`
+	Eventtype int    `json:"eventtype"`
+	X         int    `json:"x"`
+	Y         int    `json:"y"`
+	Theta     int    `json:"theta"`
 }
 
 func (p *Player) run(stream <-chan []byte) {
@@ -67,10 +76,10 @@ func (p *Player) run(stream <-chan []byte) {
 		case <-p.done:
 			return
 		case msg := <-stream:
-			var req api.EventRequest
+			var req EventRequest
 			json.Unmarshal(msg, &req)
 
-			p.ChangeDirection(req.Key)
+			p.Move(req.X, req.Y, req.Theta)
 		}
 	}
 }
