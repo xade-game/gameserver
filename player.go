@@ -21,9 +21,6 @@ type Player struct {
 	Status int
 }
 
-func (p *Player) ID() string {
-	return p.Client.ID()
-}
 func NewPlayer(client system.Client, stream <-chan []byte, x, y int) *Player {
 	p := &Player{
 		x:      x,
@@ -33,6 +30,10 @@ func NewPlayer(client system.Client, stream <-chan []byte, x, y int) *Player {
 	}
 	go p.run(stream)
 	return p
+}
+
+func (p *Player) ID() string {
+	return p.Client.ID()
 }
 
 func (p *Player) Finish() {
