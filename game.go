@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/myoan/snake/api"
 )
 
 type GameEngine struct {
@@ -43,6 +45,8 @@ func (ge *GameEngine) ExecuteIngame() {
 	for i, c := range ge.Clients {
 		players[i] = NewPlayer(c, c.Stream(), 0, 0)
 	}
+	ingame := NewGame(1280, 960, players)
+	go ingame.Run()
 }
 
 const (
@@ -153,4 +157,32 @@ func (mng *SceneManager) addScene(sceneID int) {
 		eventMap: m,
 	}
 	mng.Scenes = append(mng.Scenes, scene)
+}
+
+type Game struct {
+	width   int
+	height  int
+	players []*Player
+}
+
+func NewGame(w, h int, players []*Player) *Game {
+	return &Game{
+		width:   w,
+		height:  h,
+		players: players,
+	}
+}
+
+func (g *Game) Run() {
+	t := time.NewTicker(100 * time.Millisecond)
+	defer t.Stop()
+
+	for range t.C {
+		for _, player := range g.players {
+			player.Move()
+		}
+		for _, player := range g.players {
+			player.Send(api.GameStatusOK, g.players)
+		}
+	}
 }
