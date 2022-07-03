@@ -42,7 +42,7 @@ func main() {
 
 	var err error
 
-	ge := NewGameEngine()
+	ge := system.NewGameEngine(PlayerNum)
 	ge.SceneMng.AddHandler(system.EventClientConnect, SceneMatchmaking, func(args interface{}) {
 		log.Printf("Scene: MatchMaking (%d)\n", len(ge.Clients))
 		ta := args.(system.TriggerArgument)
@@ -55,7 +55,12 @@ func main() {
 				log.Fatalf("Agones SDK: Failed to Allocate: %v", err)
 			}
 
-			ge.ExecuteIngame()
+			players := make([]*Player, len(ge.Clients))
+			for i, c := range ge.Clients {
+				players[i] = NewPlayer(c, c.Stream(), 0, 0)
+			}
+			ingame := NewGame(1280, 960, players)
+			go ingame.Run()
 		} else {
 			data := &api.EventResponse{
 				Status: api.GameStatusWaiting,

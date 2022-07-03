@@ -19,18 +19,16 @@ func (s *Scene) AddEventHandler(eventType int, h SceneHandler) error {
 type SceneHandler func(interface{})
 
 type SceneManager struct {
-	// SceneID is current scene ID
-	SceneID        int
+	CurrentSceneID int
 	sceneMap       map[int]func(args interface{})
 	Scenes         []*Scene
 	defaultHandler SceneHandler
 }
 
-func NewSceneManager(id int) *SceneManager {
+func NewSceneManager() *SceneManager {
 	m := make(map[int]func(interface{}))
 	scenes := make([]*Scene, 0)
 	return &SceneManager{
-		SceneID:        id,
 		sceneMap:       m,
 		Scenes:         scenes,
 		defaultHandler: func(args interface{}) {},
@@ -69,7 +67,7 @@ func (mng *SceneManager) DefaultHandler(h SceneHandler) {
 func (mng *SceneManager) Update(data interface{}) error {
 	args := data.(TriggerArgument)
 
-	scene, err := mng.FindBySceneID(mng.SceneID)
+	scene, err := mng.FindBySceneID(mng.CurrentSceneID)
 	if err != nil {
 		return err
 	}
@@ -83,7 +81,7 @@ func (mng *SceneManager) Update(data interface{}) error {
 }
 
 func (mng *SceneManager) MoveScene(sid int) {
-	mng.SceneID = sid
+	mng.CurrentSceneID = sid
 	fmt.Printf("SceneID Change: %d\n", sid)
 }
 

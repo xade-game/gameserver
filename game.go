@@ -1,53 +1,10 @@
 package main
 
 import (
-	"math/rand"
 	"time"
 
 	"github.com/xade-game/game-server/api"
-	"github.com/xade-game/game-server/system"
 )
-
-type GameEngine struct {
-	Clients  []system.Client
-	SceneMng *system.SceneManager
-}
-
-func NewGameEngine() *GameEngine {
-	rand.Seed(time.Now().Unix())
-	clients := make([]system.Client, 0)
-	mng := system.NewSceneManager(SceneMatchmaking)
-	return &GameEngine{
-		Clients:  clients,
-		SceneMng: mng,
-	}
-}
-
-func (ge *GameEngine) AddClient(c system.Client) {
-	ge.Clients = append(ge.Clients, c)
-}
-
-func (ge *GameEngine) DeleteClient(cid string) {
-	for i, c := range ge.Clients {
-		if c.ID() == cid {
-			ge.Clients = append(ge.Clients[:i], ge.Clients[i+1:]...)
-			return
-		}
-	}
-}
-
-func (ge *GameEngine) ReachMaxClient() bool {
-	return len(ge.Clients) >= PlayerNum
-}
-
-func (ge *GameEngine) ExecuteIngame() {
-	players := make([]*Player, len(ge.Clients))
-	for i, c := range ge.Clients {
-		players[i] = NewPlayer(c, c.Stream(), 0, 0)
-	}
-	ingame := NewGame(1280, 960, players)
-	go ingame.Run()
-}
 
 const (
 	SceneMatchmaking = iota
