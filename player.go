@@ -6,12 +6,18 @@ import (
 	"github.com/myoan/snake/api"
 )
 
+const (
+	PlayerAlive = iota
+	PlayerDead
+)
+
 type Player struct {
 	x      int
 	y      int
 	theta  int
 	done   chan struct{}
 	Client Client
+	Status int
 }
 
 func (p *Player) ID() string {
@@ -22,6 +28,7 @@ func NewPlayer(client Client, stream <-chan []byte, x, y int) *Player {
 		x:      x,
 		y:      y,
 		Client: client,
+		Status: PlayerAlive,
 	}
 	go p.run(stream)
 	return p
