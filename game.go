@@ -1,10 +1,4 @@
-package main
-
-import (
-	"time"
-
-	"github.com/xade-game/game-server/api"
-)
+package gameserver
 
 const (
 	SceneMatchmaking = iota
@@ -15,6 +9,7 @@ type Game struct {
 	width   int
 	height  int
 	players map[string]*Player
+	status  int
 }
 
 func NewGame(w, h int, players []*Player) *Game {
@@ -28,27 +23,26 @@ func NewGame(w, h int, players []*Player) *Game {
 		width:   w,
 		height:  h,
 		players: playerMap,
+		status:  -1,
 	}
 }
 
-func (g *Game) Run() {
-	t := time.NewTicker(100 * time.Millisecond)
-	defer t.Stop()
+func (g *Game) Start() {
+	g.status = 0
+}
 
-	players := make([]*Player, 0, len(g.players))
-	for _, p := range g.players {
-		players = append(players, p)
-	}
+func (g *Game) Stop() {
+	g.status = -1
+}
 
-	for range t.C {
-		for _, player := range g.players {
-			err := player.Send(api.GameStatusOK, players)
+func (g *Game) IsStart() bool {
+	return g.status == 0
+}
 
-			if err != nil {
-				player.Status = PlayerDead
-				player.Finish()
-				delete(g.players, player.ID())
-			}
-		}
-	}
+func (g *Game) FindPlayerById(id string) (*Player, bool) {
+	p, found := g.players[id]
+	return p, found
+}
+
+func (g *Game) RefreshUser() {
 }

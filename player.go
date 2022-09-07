@@ -1,10 +1,11 @@
-package main
+package gameserver
 
 import (
+	"context"
 	"encoding/json"
 
-	"github.com/xade-game/game-server/api"
-	"github.com/xade-game/game-server/system"
+	"github.com/xade-game/gameserver/api"
+	"github.com/xade-game/gameserver/system"
 )
 
 const (
@@ -21,6 +22,8 @@ type Player struct {
 	Status int
 }
 
+var ctx context.Context
+
 func NewPlayer(client system.Client, stream <-chan []byte, x, y int) *Player {
 	p := &Player{
 		x:      x,
@@ -28,7 +31,7 @@ func NewPlayer(client system.Client, stream <-chan []byte, x, y int) *Player {
 		Client: client,
 		Status: PlayerAlive,
 	}
-	go p.run(stream)
+	// go p.run(stream)
 	return p
 }
 
@@ -83,4 +86,8 @@ func (p *Player) run(stream <-chan []byte) {
 			p.Move(req.X, req.Y, req.Theta)
 		}
 	}
+}
+
+func FindByID(id string) (*Player, error) {
+	return nil, nil
 }

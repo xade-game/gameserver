@@ -1,4 +1,4 @@
-module github.com/xade-game/game-server
+module github.com/xade-game/gameserver
 
 go 1.17
 
