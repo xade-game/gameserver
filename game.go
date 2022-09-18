@@ -1,6 +1,11 @@
 package gameserver
 
-import "math/rand"
+import (
+	"math/rand"
+	"time"
+
+	"github.com/xade-game/gameserver/api"
+)
 
 const (
 	SceneMatchmaking = iota
@@ -47,6 +52,28 @@ func (g *Game) FindPlayerById(id string) (*Player, bool) {
 }
 
 func (g *Game) RefreshUser() {
+}
+
+func (g *Game) Run() {
+	t := time.NewTicker(100 * time.Millisecond)
+	defer t.Stop()
+
+	players := make([]*Player, 0, len(g.players))
+	for _, p := range g.players {
+		players = append(players, p)
+	}
+
+	for range t.C {
+		for _, player := range g.players {
+			err := player.Send(api.GameStatusOK, players)
+
+			if err != nil {
+				player.Status = PlayerDead
+				player.Finish()
+				delete(g.players, player.ID())
+			}
+		}
+	}
 }
 
 type Board struct {

@@ -58,7 +58,7 @@ func MatchMakingHandler(client *cambrian.WebSocketClient, engine interface{}) {
 				players[i] = NewPlayer(c, c.Stream(), 0, 0)
 			}
 			ingame = NewGame(1280, 960, players)
-			ingame.Start()
+			go ingame.Run()
 		} else {
 			data := &api.EventResponse{
 				Status: api.GameStatusWaiting,
