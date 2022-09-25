@@ -40,7 +40,6 @@ func main() {
 	ge = system.NewGameEngine(PlayerNum)
 
 	ge.SceneMng.AddHandler(system.EventClientFinish, gamelogic.SceneIngame, func(args interface{}) {
-		log.Printf("Trigger: EventClientFinish\n")
 		ta := args.(system.TriggerArgument)
 		ge.DeleteClient(ta.Client.ID())
 	})

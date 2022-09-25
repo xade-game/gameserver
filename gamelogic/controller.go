@@ -56,8 +56,8 @@ func MatchMakingHandler(client *cambrian.WebSocketClient, engine interface{}) {
 
 			players := make([]*Player, len(ge.Clients))
 			for i, c := range ge.Clients {
-				x := rand.Intn(10)
-				y := rand.Intn(10)
+				x := rand.Intn(GameCellWidth)
+				y := rand.Intn(GameCellHeight)
 				players[i] = NewPlayer(c, c.Stream(), x, y)
 			}
 			ingame = NewGame(GameCellWidth, GameCellHeight, players)
@@ -84,7 +84,6 @@ func MatchMakingHandler(client *cambrian.WebSocketClient, engine interface{}) {
 			for _, c := range ge.Clients {
 				c.Send(data)
 			}
-			// go ingame.Run()
 		} else {
 			data := &api.EventResponse{
 				Status: api.GameStatusWaiting,
@@ -114,7 +113,7 @@ func DisconnectHandler(client *cambrian.WebSocketClient, engine interface{}) {
 
 func PublishStatus(req cambrian.Request) {
 	if ingame != nil && ingame.IsStart() {
-		fmt.Println("--- tick!!!")
+		log.Println("--- tick!!!")
 		players := make([]*Player, 0, len(ingame.players))
 		for _, p := range ingame.players {
 			players = append(players, p)

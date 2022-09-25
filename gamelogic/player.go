@@ -11,9 +11,6 @@ import (
 const (
 	PlayerAlive = iota
 	PlayerDead
-
-	GameCellHeight = 40
-	GameCellWidth  = 40
 )
 
 type Player struct {
