@@ -17,13 +17,18 @@ type Game struct {
 	height  int
 	players map[string]*Player
 	status  int
+	board   *Board
 }
 
 func NewGame(w, h int, players []*Player) *Game {
 	playerMap := make(map[string]*Player)
 
+	board := NewBoard(w, h)
+	board.GenerateApple()
+
 	for _, p := range players {
 		playerMap[p.ID()] = p
+		board.SetCell(p.x, p.y, 1)
 	}
 
 	return &Game{
@@ -31,6 +36,7 @@ func NewGame(w, h int, players []*Player) *Game {
 		height:  h,
 		players: playerMap,
 		status:  -1,
+		board:   board,
 	}
 }
 
@@ -51,6 +57,12 @@ func (g *Game) FindPlayerById(id string) (*Player, bool) {
 	return p, found
 }
 
+func (g *Game) DrawBoard() {
+	for _, p := range g.players {
+		g.board.SetCell(p.x, p.y, 3)
+	}
+}
+
 func (g *Game) RefreshUser() {
 }
 
@@ -65,7 +77,9 @@ func (g *Game) Run() {
 
 	for range t.C {
 		for _, player := range g.players {
-			err := player.Send(api.GameStatusOK, players)
+			err := player.Send(api.GameStatusOK, g.board, players)
+
+			// player.Move()
 
 			if err != nil {
 				player.Status = PlayerDead

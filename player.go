@@ -11,6 +11,9 @@ import (
 const (
 	PlayerAlive = iota
 	PlayerDead
+
+	GameCellHeight = 40
+	GameCellWidth  = 40
 )
 
 type Player struct {
@@ -31,7 +34,7 @@ func NewPlayer(client system.Client, stream <-chan []byte, x, y int) *Player {
 		Client: client,
 		Status: PlayerAlive,
 	}
-	// go p.run(stream)
+	go p.run(stream)
 	return p
 }
 
@@ -43,7 +46,7 @@ func (p *Player) Finish() {
 	p.Client.Close()
 }
 
-func (p *Player) Send(status int, players []*Player) error {
+func (p *Player) Send(status int, board *Board, players []*Player) error {
 	playersProtocol := make([]api.PlayerResponse, len(players))
 	for i, player := range players {
 		playersProtocol[i] = api.PlayerResponse{
@@ -57,9 +60,9 @@ func (p *Player) Send(status int, players []*Player) error {
 	resp := &api.EventResponse{
 		Status: status,
 		Body: api.ResponseBody{
-			Board:   []int{},
-			Width:   0,
-			Height:  0,
+			Board:   board.ToArray(),
+			Width:   GameCellWidth,
+			Height:  GameCellHeight,
 			Players: playersProtocol,
 		},
 	}

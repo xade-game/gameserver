@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 
 	"github.com/xade-game/gameserver/api"
 	"github.com/xade-game/gameserver/cambrian"
@@ -55,10 +56,35 @@ func MatchMakingHandler(client *cambrian.WebSocketClient, engine interface{}) {
 
 			players := make([]*Player, len(ge.Clients))
 			for i, c := range ge.Clients {
-				players[i] = NewPlayer(c, c.Stream(), 0, 0)
+				x := rand.Intn(10)
+				y := rand.Intn(10)
+				players[i] = NewPlayer(c, c.Stream(), x, y)
 			}
-			ingame = NewGame(1280, 960, players)
-			go ingame.Run()
+			ingame = NewGame(GameCellWidth, GameCellHeight, players)
+
+			playersProtocol := make([]api.PlayerResponse, len(players))
+			for i, player := range players {
+				playersProtocol[i] = api.PlayerResponse{
+					ID:        player.ID(),
+					X:         player.x,
+					Y:         player.y,
+					Direction: player.theta,
+				}
+			}
+
+			data, _ := json.Marshal(&api.EventResponse{
+				Status: api.GameStatusOK,
+				Body: api.ResponseBody{
+					Board:   ingame.board.ToArray(),
+					Width:   ingame.width,
+					Height:  ingame.height,
+					Players: playersProtocol,
+				},
+			})
+			for _, c := range ge.Clients {
+				c.Send(data)
+			}
+			// go ingame.Run()
 		} else {
 			data := &api.EventResponse{
 				Status: api.GameStatusWaiting,
@@ -95,7 +121,7 @@ func PublishStatus(req cambrian.Request) {
 		}
 
 		for _, player := range ingame.players {
-			err := player.Send(api.GameStatusOK, players)
+			err := player.Send(api.GameStatusOK, ingame.board, players)
 
 			if err != nil {
 				player.Status = PlayerDead
