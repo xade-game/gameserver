@@ -62,27 +62,8 @@ func MatchMakingHandler(client *cambrian.WebSocketClient, engine interface{}) {
 			}
 			ingame = NewGame(GameCellWidth, GameCellHeight, players)
 
-			playersProtocol := make([]api.PlayerResponse, len(players))
-			for i, player := range players {
-				playersProtocol[i] = api.PlayerResponse{
-					ID:        player.ID(),
-					X:         player.x,
-					Y:         player.y,
-					Direction: player.theta,
-				}
-			}
-
-			data, _ := json.Marshal(&api.EventResponse{
-				Status: api.GameStatusOK,
-				Body: api.ResponseBody{
-					Board:   ingame.board.ToArray(),
-					Width:   ingame.width,
-					Height:  ingame.height,
-					Players: playersProtocol,
-				},
-			})
-			for _, c := range ge.Clients {
-				c.Send(data)
+			for _, player := range players {
+				player.Send(api.GameStatusOK, ingame.board, players)
 			}
 		} else {
 			data := &api.EventResponse{
@@ -94,14 +75,8 @@ func MatchMakingHandler(client *cambrian.WebSocketClient, engine interface{}) {
 		}
 	case SceneIngame:
 		log.Printf("Scene: Ingame\n")
-		ge.DeleteClient(client.ID())
-
-		data := &api.EventResponse{
-			Status: api.GameStatusError,
-		}
-
-		bytes, _ := json.Marshal(&data)
-		client.Send(bytes)
+		player, _ := ingame.GetPlayer(client.ID())
+		player.Send(api.GameStatusError, ingame.board, ingame.PlayerArray())
 	}
 }
 
@@ -114,10 +89,7 @@ func DisconnectHandler(client *cambrian.WebSocketClient, engine interface{}) {
 func PublishStatus(req cambrian.Request) {
 	if ingame != nil && ingame.IsStart() {
 		log.Println("--- tick!!!")
-		players := make([]*Player, 0, len(ingame.players))
-		for _, p := range ingame.players {
-			players = append(players, p)
-		}
+		players := ingame.PlayerArray()
 
 		for _, player := range ingame.players {
 			err := player.Send(api.GameStatusOK, ingame.board, players)
