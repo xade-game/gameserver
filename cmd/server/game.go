@@ -1,4 +1,4 @@
-package gamelogic
+package main
 
 import (
 	"time"

@@ -1,4 +1,4 @@
-package gamelogic
+package main
 
 import (
 	"encoding/json"
@@ -51,7 +51,7 @@ func MatchMakingHandler(client *cambrian.WebSocketClient, engine interface{}) {
 			ID:     client.ID(),
 		})
 		client.Send(data)
-		if ge.ReachMaxClient() {
+		if ge.ClientNum() >= PlayerNum {
 			ge.SceneMng.MoveScene(SceneIngame)
 
 			players := make([]*Player, len(ge.Clients))

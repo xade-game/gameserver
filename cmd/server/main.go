@@ -8,7 +8,6 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/xade-game/gameserver/cambrian"
-	"github.com/xade-game/gameserver/gamelogic"
 	"github.com/xade-game/gameserver/system"
 )
 
@@ -37,18 +36,18 @@ func main() {
 	flag.StringVar(&addr, "addr", ":8080", "http service address")
 	flag.Parse()
 
-	ge = system.NewGameEngine(PlayerNum)
+	ge = system.NewGameEngine()
 
-	ge.SceneMng.AddHandler(system.EventClientFinish, gamelogic.SceneIngame, func(args interface{}) {
+	ge.SceneMng.AddHandler(system.EventClientFinish, SceneIngame, func(args interface{}) {
 		ta := args.(system.TriggerArgument)
 		ge.DeleteClient(ta.Client.ID())
 	})
 
 	cmbr = cambrian.New()
-	cmbr.RegisterWebsocketConnect(gamelogic.MatchMakingHandler)
-	cmbr.RegisterWebsocketMessage(gamelogic.RouteHandler)
-	cmbr.RegisterWebsocketDisconnect(gamelogic.DisconnectHandler)
-	cmbr.RegisterPeriodic(100*time.Millisecond, gamelogic.PublishStatus)
+	cmbr.RegisterWebsocketConnect(MatchMakingHandler)
+	cmbr.RegisterWebsocketMessage(RouteHandler)
+	cmbr.RegisterWebsocketDisconnect(DisconnectHandler)
+	cmbr.RegisterPeriodic(100*time.Millisecond, PublishStatus)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		ingameHandler(ge.SceneMng, w, r)
 	})

@@ -6,19 +6,17 @@ import (
 )
 
 type GameEngine struct {
-	maxClient int
-	Clients   []Client
-	SceneMng  *SceneManager
+	Clients  []Client
+	SceneMng *SceneManager
 }
 
-func NewGameEngine(max int) *GameEngine {
+func NewGameEngine() *GameEngine {
 	rand.Seed(time.Now().Unix())
 	clients := make([]Client, 0)
 	mng := NewSceneManager()
 	return &GameEngine{
-		maxClient: max,
-		Clients:   clients,
-		SceneMng:  mng,
+		Clients:  clients,
+		SceneMng: mng,
 	}
 }
 
@@ -35,6 +33,6 @@ func (ge *GameEngine) DeleteClient(cid string) {
 	}
 }
 
-func (ge *GameEngine) ReachMaxClient() bool {
-	return len(ge.Clients) >= ge.maxClient
+func (ge *GameEngine) ClientNum() int {
+	return len(ge.Clients)
 }
