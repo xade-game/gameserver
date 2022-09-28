@@ -1,7 +1,6 @@
 package cambrian
 
 import (
-	"fmt"
 	"log"
 	"sync"
 
@@ -77,7 +76,7 @@ func (c *WebSocketClient) run() {
 			c.done <- struct{}{}
 			return
 		}
-		fmt.Printf("type: %d, msg: %s\n", mt, msg)
+		log.Printf("type: %d, msg: %s\n", mt, msg)
 		c.stream <- msg
 	}
 }

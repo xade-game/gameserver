@@ -24,6 +24,7 @@ type EventRequest struct {
 	X         int    `json:"x"`
 	Y         int    `json:"y"`
 	Theta     int    `json:"theta"`
+	Key       int    `json:"key"`
 }
 
 type PlayerResponse struct {

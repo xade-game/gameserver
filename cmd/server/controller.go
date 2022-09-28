@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 
 	"github.com/xade-game/gameserver/api"
 	"github.com/xade-game/gameserver/cambrian"
@@ -34,9 +33,9 @@ func RouteHandler(req cambrian.Request, engine interface{}) {
 			log.Print(err)
 		}
 		fmt.Printf("move: (%d, %d)\n", event.X, event.Y)
-		p.Move(event.X, event.Y, event.Theta)
+		p.Move(ingame.board)
 	default:
-		fmt.Printf("unknown path: %s\n", msg.Path)
+		fmt.Printf("unknown path: '%s'\n", msg.Path)
 	}
 }
 
@@ -53,14 +52,16 @@ func MatchMakingHandler(client *cambrian.WebSocketClient, engine interface{}) {
 		client.Send(data)
 		if ge.ClientNum() >= PlayerNum {
 			ge.SceneMng.MoveScene(SceneIngame)
-
-			players := make([]*Player, len(ge.Clients))
-			for i, c := range ge.Clients {
-				x := rand.Intn(GameCellWidth)
-				y := rand.Intn(GameCellHeight)
-				players[i] = NewPlayer(c, c.Stream(), x, y)
+			players := make([]*Player, 0, len(ge.Clients))
+			for _, c := range ge.Clients {
+				players = append(players, NewPlayer(c, c.Stream(), GameCellWidth, GameCellHeight))
 			}
 			ingame = NewGame(GameCellWidth, GameCellHeight, players)
+			ingame.Start()
+
+			for _, player := range players {
+				player.GenerateSnake(ingame.board)
+			}
 
 			for _, player := range players {
 				player.Send(api.GameStatusOK, ingame.board, players)
@@ -84,13 +85,19 @@ func DisconnectHandler(client *cambrian.WebSocketClient, engine interface{}) {
 	fmt.Println("Disonnect!!")
 	ge := engine.(*system.GameEngine)
 	ge.DeleteClient(client.ID())
+	if ge.ClientNum() == 0 {
+		ingame.Stop()
+	}
 }
 
 func PublishStatus(req cambrian.Request) {
 	if ingame != nil && ingame.IsStart() {
-		log.Println("--- tick!!!")
 		players := ingame.PlayerArray()
 
+		for _, player := range ingame.players {
+			player.Move(ingame.board)
+		}
+		ingame.board.Update()
 		for _, player := range ingame.players {
 			err := player.Send(api.GameStatusOK, ingame.board, players)
 
