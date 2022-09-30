@@ -1,8 +1,6 @@
 package main
 
 import (
-	"time"
-
 	"github.com/xade-game/gameserver/api"
 )
 
@@ -69,25 +67,23 @@ func (g *Game) RefreshUser() {
 }
 
 func (g *Game) Run() {
-	t := time.NewTicker(100 * time.Millisecond)
-	defer t.Stop()
+	players := g.PlayerArray()
 
-	players := make([]*Player, 0, len(g.players))
-	for _, p := range g.players {
-		players = append(players, p)
+	for _, player := range g.players {
+		if err := player.Move(g.board); err != nil {
+			player.Status = PlayerDead
+			player.Finish()
+			delete(g.players, player.ID())
+		}
 	}
+	g.board.Update()
+	for _, player := range g.players {
+		err := player.Send(api.GameStatusOK, g.board, players)
 
-	for range t.C {
-		for _, player := range g.players {
-			err := player.Send(api.GameStatusOK, g.board, players)
-
-			// player.Move()
-
-			if err != nil {
-				player.Status = PlayerDead
-				player.Finish()
-				delete(g.players, player.ID())
-			}
+		if err != nil {
+			player.Status = PlayerDead
+			player.Finish()
+			delete(g.players, player.ID())
 		}
 	}
 }

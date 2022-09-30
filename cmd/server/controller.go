@@ -91,20 +91,6 @@ func DisconnectHandler(client *cambrian.WebSocketClient, engine interface{}) {
 
 func PublishStatus(req cambrian.Request) {
 	if ingame != nil && ingame.IsStart() {
-		players := ingame.PlayerArray()
-
-		for _, player := range ingame.players {
-			player.Move(ingame.board)
-		}
-		ingame.board.Update()
-		for _, player := range ingame.players {
-			err := player.Send(api.GameStatusOK, ingame.board, players)
-
-			if err != nil {
-				player.Status = PlayerDead
-				player.Finish()
-				delete(ingame.players, player.ID())
-			}
-		}
+		ingame.Run()
 	}
 }
