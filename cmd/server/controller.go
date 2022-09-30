@@ -32,8 +32,7 @@ func RouteHandler(req cambrian.Request, engine interface{}) {
 		if err != nil {
 			log.Print(err)
 		}
-		fmt.Printf("move: (%d, %d)\n", event.X, event.Y)
-		p.Move(ingame.board)
+		p.ChangeDirection(event.Key)
 	default:
 		fmt.Printf("unknown path: '%s'\n", msg.Path)
 	}

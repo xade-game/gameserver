@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -20,14 +19,11 @@ type Player struct {
 	x         int
 	y         int
 	theta     int
-	done      chan struct{}
 	Client    system.Client
 	Status    int
 	direction int
 	size      int
 }
-
-var ctx context.Context
 
 func NewPlayer(client system.Client, stream <-chan []byte, w, h int) *Player {
 	x := rand.Intn(w)
@@ -42,7 +38,6 @@ func NewPlayer(client system.Client, stream <-chan []byte, w, h int) *Player {
 		Client:    client,
 		Status:    PlayerAlive,
 	}
-	go p.run(stream)
 	return p
 }
 
@@ -52,7 +47,6 @@ func (p *Player) ID() string {
 
 func (p *Player) Finish() {
 	p.Status = 1
-	p.done <- struct{}{}
 	p.Client.Close()
 }
 
@@ -79,24 +73,6 @@ func (p *Player) Send(status int, board *Board, players []*Player) error {
 
 	bytes, _ := json.Marshal(&resp)
 	return p.Client.Send(bytes)
-}
-
-func (p *Player) run(stream <-chan []byte) {
-	for {
-		select {
-		case <-p.done:
-			return
-		case msg := <-stream:
-			var req api.EventRequest
-			json.Unmarshal(msg, &req)
-
-			p.ChangeDirection(req.Key)
-		}
-	}
-}
-
-func FindByID(id string) (*Player, error) {
-	return nil, nil
 }
 
 func (p *Player) GenerateSnake(board *Board) {
