@@ -51,6 +51,7 @@ func (c *WebSocketClient) Stream() chan []byte {
 
 func (c *WebSocketClient) Close() {
 	c.status = Closed
+	c.conn.Close()
 }
 
 func newWebSocketClient(c *websocket.Conn) *WebSocketClient {
