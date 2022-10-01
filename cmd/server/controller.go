@@ -81,7 +81,7 @@ func MatchMakingHandler(client *cambrian.WebSocketClient, engine interface{}) {
 }
 
 func DisconnectHandler(client *cambrian.WebSocketClient, engine interface{}) {
-	fmt.Println("Disonnect!!")
+	fmt.Println("Disconnect!!")
 	ge := engine.(*system.GameEngine)
 	ge.DeleteClient(client.ID())
 	if ge.ClientNum() == 0 {

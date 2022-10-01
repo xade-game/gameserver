@@ -92,6 +92,7 @@ func (g *Game) GetPlayer(id string) (*Player, bool) {
 	p, found := g.players[id]
 	return p, found
 }
+
 func (g *Game) PlayerArray() []*Player {
 	players := make([]*Player, 0, len(g.players))
 	for _, p := range g.players {
