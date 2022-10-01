@@ -37,11 +37,6 @@ func main() {
 
 	ge = system.NewGameEngine()
 
-	ge.SceneMng.AddHandler(system.EventClientFinish, SceneIngame, func(args interface{}) {
-		ta := args.(system.TriggerArgument)
-		ge.DeleteClient(ta.Client.ID())
-	})
-
 	cmbr := cambrian.New()
 	cmbr.RegisterWebsocketConnect(MatchMakingHandler)
 	cmbr.RegisterWebsocketMessage(RouteHandler)

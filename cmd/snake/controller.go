@@ -40,43 +40,36 @@ func RouteHandler(req cambrian.Request, engine interface{}) {
 
 func MatchMakingHandler(client *cambrian.WebSocketClient, engine interface{}) {
 	ge := engine.(*system.GameEngine)
-	switch ge.SceneMng.CurrentSceneID {
-	case SceneMatchmaking:
-		log.Printf("Scene: MatchMaking (%d)\n", len(ge.Clients))
-		ge.AddClient(client)
-		data, _ := json.Marshal(&api.SInitMessage{
-			Status: api.GameStatusInit,
-			ID:     client.ID(),
-		})
-		client.Send(data)
-		if ge.ClientNum() >= PlayerNum {
-			ge.SceneMng.MoveScene(SceneIngame)
-			players := make([]*Player, 0, len(ge.Clients))
-			for _, c := range ge.Clients {
-				players = append(players, NewPlayer(c, c.Stream(), GameCellWidth, GameCellHeight))
-			}
-			ingame = NewGame(GameCellWidth, GameCellHeight, players)
-			ingame.Start()
-
-			for _, player := range players {
-				player.GenerateSnake(ingame.board)
-			}
-
-			for _, player := range players {
-				player.Send(api.GameStatusOK, ingame.board, players)
-			}
-		} else {
-			data := &api.EventResponse{
-				Status: api.GameStatusWaiting,
-			}
-
-			bytes, _ := json.Marshal(&data)
-			client.Send(bytes)
+	ge.AddClient(client)
+	data, _ := json.Marshal(&api.SInitMessage{
+		Status: api.GameStatusInit,
+		ID:     client.ID(),
+	})
+	client.Send(data)
+	if ge.ClientNum() >= PlayerNum {
+		players := make([]*Player, 0, len(ge.Clients))
+		for _, c := range ge.Clients {
+			players = append(players, NewPlayer(c, c.Stream(), GameCellWidth, GameCellHeight))
 		}
-	case SceneIngame:
-		log.Printf("Scene: Ingame\n")
-		player, _ := ingame.GetPlayer(client.ID())
-		player.Send(api.GameStatusError, ingame.board, ingame.PlayerArray())
+		ingame = NewGame(GameCellWidth, GameCellHeight, players)
+		ingame.Start()
+
+		// init game
+
+		for _, player := range players {
+			player.GenerateSnake(ingame.board)
+		}
+
+		for _, player := range players {
+			player.Send(api.GameStatusOK, ingame.board, players)
+		}
+	} else {
+		data := &api.EventResponse{
+			Status: api.GameStatusWaiting,
+		}
+
+		bytes, _ := json.Marshal(&data)
+		client.Send(bytes)
 	}
 }
 
