@@ -1,3 +1,2 @@
 build:
-	go build -o exe/server ./cmd/server
-	go build -o exe/client ./cmd/client
+	go build -o exe/snake ./cmd/snake

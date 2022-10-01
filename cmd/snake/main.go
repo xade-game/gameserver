@@ -15,10 +15,9 @@ const (
 	PlayerNum = 2
 )
 
-var cmbr *cambrian.Cambrian
 var ge *system.GameEngine
 
-func ingameHandler(mng *system.SceneManager, w http.ResponseWriter, r *http.Request) {
+func ingameHandler(mng *system.SceneManager, cmbr *cambrian.Cambrian, w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{}
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	c, err := upgrader.Upgrade(w, r, nil)
@@ -43,13 +42,13 @@ func main() {
 		ge.DeleteClient(ta.Client.ID())
 	})
 
-	cmbr = cambrian.New()
+	cmbr := cambrian.New()
 	cmbr.RegisterWebsocketConnect(MatchMakingHandler)
 	cmbr.RegisterWebsocketMessage(RouteHandler)
 	cmbr.RegisterWebsocketDisconnect(DisconnectHandler)
 	cmbr.RegisterPeriodic(100*time.Millisecond, PublishStatus)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		ingameHandler(ge.SceneMng, w, r)
+		ingameHandler(ge.SceneMng, cmbr, w, r)
 	})
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
