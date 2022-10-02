@@ -16,6 +16,7 @@ const (
 )
 
 var ge *system.GameEngine
+var ingame *Game
 
 func ingameHandler(mng *system.SceneManager, cmbr *cambrian.Cambrian, w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{}
@@ -35,7 +36,7 @@ func main() {
 	flag.StringVar(&addr, "addr", ":8080", "http service address")
 	flag.Parse()
 
-	ge = system.NewGameEngine()
+	ge = system.NewGameEngine(ingame)
 
 	cmbr := cambrian.New()
 	cmbr.RegisterWebsocketConnect(MatchMakingHandler)

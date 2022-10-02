@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/xade-game/gameserver/api"
+	"github.com/xade-game/gameserver/system"
 )
 
 const (
@@ -18,17 +19,21 @@ type Game struct {
 	players map[string]*Player
 	status  int
 	board   *Board
+	engine  *system.GameEngine
 }
 
-func NewGame(w, h int, players []*Player) *Game {
+func NewGame(w, h int, engine *system.GameEngine) *Game {
 	playerMap := make(map[string]*Player)
 
 	board := NewBoard(w, h)
 	board.GenerateApple()
 
-	for _, p := range players {
-		playerMap[p.ID()] = p
-		board.SetCell(p.x, p.y, 1)
+	for _, c := range ge.Clients {
+		player := NewPlayer(c, c.Stream(), w, h)
+		playerMap[player.ID()] = player
+		board.SetCell(player.x, player.y, 1)
+
+		player.GenerateSnake(board)
 	}
 
 	return &Game{
@@ -37,6 +42,7 @@ func NewGame(w, h int, players []*Player) *Game {
 		players: playerMap,
 		status:  -1,
 		board:   board,
+		engine:  engine,
 	}
 }
 
@@ -66,7 +72,7 @@ func (g *Game) DrawBoard() {
 func (g *Game) RefreshUser() {
 }
 
-func (g *Game) Run() {
+func (g *Game) Update() {
 	players := g.PlayerArray()
 
 	for _, player := range g.players {
@@ -99,4 +105,11 @@ func (g *Game) PlayerArray() []*Player {
 		players = append(players, p)
 	}
 	return players
+}
+
+func (g *Game) SendAll() {
+	players := g.PlayerArray()
+	for _, player := range players {
+		player.Send(api.GameStatusOK, ingame.board, players)
+	}
 }

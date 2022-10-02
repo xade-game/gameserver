@@ -10,8 +10,6 @@ import (
 	"github.com/xade-game/gameserver/system"
 )
 
-var ingame *Game
-
 func RouteHandler(req cambrian.Request, engine interface{}) {
 	var msg api.Message
 
@@ -47,22 +45,11 @@ func MatchMakingHandler(client *cambrian.WebSocketClient, engine interface{}) {
 	})
 	client.Send(data)
 	if ge.ClientNum() >= PlayerNum {
-		players := make([]*Player, 0, len(ge.Clients))
-		for _, c := range ge.Clients {
-			players = append(players, NewPlayer(c, c.Stream(), GameCellWidth, GameCellHeight))
-		}
-		ingame = NewGame(GameCellWidth, GameCellHeight, players)
+		ingame = NewGame(GameCellWidth, GameCellHeight, ge)
 		ingame.Start()
+		ge.SetGame(ingame)
 
-		// init game
-
-		for _, player := range players {
-			player.GenerateSnake(ingame.board)
-		}
-
-		for _, player := range players {
-			player.Send(api.GameStatusOK, ingame.board, players)
-		}
+		ingame.SendAll()
 	} else {
 		data := &api.EventResponse{
 			Status: api.GameStatusWaiting,
@@ -84,6 +71,7 @@ func DisconnectHandler(client *cambrian.WebSocketClient, engine interface{}) {
 
 func PublishStatus(req cambrian.Request) {
 	if ingame != nil && ingame.IsStart() {
-		ingame.Run()
+		// ingame.Update()
+		ge.Update()
 	}
 }
