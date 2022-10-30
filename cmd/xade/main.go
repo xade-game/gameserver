@@ -4,19 +4,15 @@ import (
 	"flag"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/xade-game/gameserver/cambrian"
 	"github.com/xade-game/gameserver/system"
 )
 
-const (
-	PlayerNum = 2
-)
-
 var ge *system.GameEngine
-var ingame *Game
+
+// var ingame *Game
 
 func ingameHandler(mng *system.SceneManager, cmbr *cambrian.Cambrian, w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{}
@@ -39,12 +35,12 @@ func main() {
 	ge = system.NewGameEngine()
 
 	cmbr := cambrian.New()
-	cmbr.RegisterWebsocketConnect(MatchMakingHandler)
-	cmbr.RegisterWebsocketMessage(RouteHandler)
-	cmbr.RegisterWebsocketDisconnect(DisconnectHandler)
-	cmbr.RegisterPeriodic(100*time.Millisecond, PublishStatus)
+	cmbr.RegisterWebsocketConnect(connectHandler)
+	cmbr.RegisterWebsocketMessage(msgHandler)
+	cmbr.RegisterWebsocketDisconnect(disconnectHandler)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		ingameHandler(ge.SceneMng, cmbr, w, r)
 	})
+
 	log.Fatal(http.ListenAndServe(addr, nil))
 }

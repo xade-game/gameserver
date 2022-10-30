@@ -5,9 +5,14 @@ import (
 	"time"
 )
 
+type Game interface {
+	Update()
+}
+
 type GameEngine struct {
 	Clients  []Client
 	SceneMng *SceneManager
+	game     Game
 }
 
 func NewGameEngine() *GameEngine {
@@ -35,4 +40,14 @@ func (ge *GameEngine) DeleteClient(cid string) {
 
 func (ge *GameEngine) ClientNum() int {
 	return len(ge.Clients)
+}
+
+func (ge *GameEngine) SetGame(game Game) {
+	ge.game = game
+}
+
+func (ge *GameEngine) Update() {
+	if ge.game != nil {
+		ge.game.Update()
+	}
 }
