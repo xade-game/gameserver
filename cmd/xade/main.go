@@ -12,7 +12,7 @@ import (
 
 var ge *system.GameEngine
 
-// var ingame *Game
+var ingame *Game
 
 func ingameHandler(mng *system.SceneManager, cmbr *cambrian.Cambrian, w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{}

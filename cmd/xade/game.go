@@ -2,11 +2,16 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 
 	"github.com/xade-game/gameserver/api"
 	"github.com/xade-game/gameserver/system"
+)
+
+var (
+	ErrClientNotFound = errors.New("client not found")
 )
 
 const (
@@ -19,17 +24,17 @@ type Game struct {
 	width   int
 	height  int
 	engine  *system.GameEngine
-	players []*Player
+	players map[string]*Player
 }
 
 func NewGame(w, h int, engine *system.GameEngine) *Game {
-	players := make([]*Player, len(engine.Clients))
+	players := make(map[string]*Player)
 
-	for i, client := range engine.Clients {
+	for _, client := range engine.Clients {
 		x := rand.Intn(GameWidth)
 		y := rand.Intn(GameHeight)
 		theta := rand.Intn(360)
-		players[i] = NewPlayer(client, x, y, theta)
+		players[client.ID()] = NewPlayer(client, x, y, theta)
 	}
 	return &Game{
 		width:   w,
@@ -47,8 +52,10 @@ func (g *Game) SendStart() {
 		Height:  GameHeight,
 		Players: presp,
 	}
-	for i, p := range g.players {
+	i := 0
+	for _, p := range g.players {
 		resp.Players[i] = p.ToResponse()
+		i++
 	}
 	for _, p := range g.players {
 		data := &api.EventResponse{
@@ -62,6 +69,19 @@ func (g *Game) SendStart() {
 
 func (g *Game) Update() {
 	fmt.Println("update")
+}
+
+func (g *Game) UpdateClientStatus(req api.EventRequest) error {
+	c, found := g.players[req.UUID]
+	if !found {
+		return ErrClientNotFound
+	}
+
+	c.X = req.X
+	c.Y = req.Y
+	c.Theta = req.Theta
+
+	return nil
 }
 
 type Player struct {

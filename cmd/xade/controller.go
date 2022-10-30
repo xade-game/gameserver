@@ -18,7 +18,7 @@ func connectHandler(client *cambrian.WebSocketClient, engine interface{}) {
 	})
 	client.Send(data)
 	if ge.ClientNum() >= PlayerNum {
-		ingame := NewGame(GameWidth, GameHeight, ge)
+		ingame = NewGame(GameWidth, GameHeight, ge)
 		ingame.SendStart()
 	} else {
 		data := &api.EventResponse{
@@ -37,4 +37,9 @@ func disconnectHandler(c *cambrian.WebSocketClient, obj interface{}) {
 func msgHandler(req cambrian.Request, obj interface{}) {
 	body := req.Body()
 	fmt.Printf("body: %s\n", body)
+
+	var r api.EventRequest
+	json.Unmarshal(body, &r)
+	ingame.UpdateClientStatus(r)
+
 }
