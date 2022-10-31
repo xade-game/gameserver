@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/xade-game/gameserver/cambrian"
@@ -38,6 +39,7 @@ func main() {
 	cmbr.RegisterWebsocketConnect(connectHandler)
 	cmbr.RegisterWebsocketMessage(msgHandler)
 	cmbr.RegisterWebsocketDisconnect(disconnectHandler)
+	cmbr.RegisterPeriodic(200*time.Millisecond, publishStatus)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		ingameHandler(ge.SceneMng, cmbr, w, r)
 	})

@@ -43,3 +43,9 @@ func msgHandler(req cambrian.Request, obj interface{}) {
 	ingame.UpdateClientStatus(r)
 
 }
+
+func publishStatus(req cambrian.Request) {
+	if ingame != nil {
+		ingame.Update()
+	}
+}

@@ -69,6 +69,7 @@ func (g *Game) SendStart() {
 
 func (g *Game) Update() {
 	fmt.Println("update")
+	g.SendStart()
 }
 
 func (g *Game) UpdateClientStatus(req api.EventRequest) error {
